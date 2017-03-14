@@ -336,8 +336,9 @@ public class Query {
      * @param user the user that is rating
      * @param game the game that is being rated
      * @param rating the rating
+     * @return true if successful, otherwise false
      */
-    public static void rateGame(User user, Game game, int rating) {
+    public static boolean rateGame(User user, Game game, int rating) {
         if (conn == null) {
             createConnection();
         }
@@ -346,6 +347,7 @@ public class Query {
                    + "ON DUPLICATE KEY "
                    + "UPDATE rating = " + rating + ";";
         PreparedStatement pstmt = null;
+        boolean successful = true;
         try {
             pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, user.getUserId());
@@ -355,7 +357,9 @@ public class Query {
         } catch (SQLException e) {
             System.out.println(e);
             e.printStackTrace();
+            successful = false;
         } 
+        return successful;
     }
     
     /**
@@ -700,7 +704,7 @@ public class Query {
         String sql = "UPDATE "+db+".GameReview "
                 + "SET  reviewText = \""+reviewText+"\" "
                 + "WHERE fk_gameId = "+game.getGameId()+" "
-                + "AND fk_userId = "+user.getUserId()+";";
+                + "AND fk_reviewerId = "+user.getUserId()+";";
         PreparedStatement pstmt = null;
         boolean successful = true;
         try {
@@ -714,22 +718,35 @@ public class Query {
         return successful;
     }
     
+    /**
+     * Gets the review for the game by user.
+     * 
+     * @param game the game
+     * @param user the user
+     * @return the review of the game by the user
+     */
     public static String getReview(Game game, User user) {
-    	if (conn == null) {
+        if (conn == null) {
             createConnection();
         }
-        String sql = "SELECT reviwText FROM "+db+".GameReview "
-                + "WHERE fk_gameId = "+game.getGameId()+" "
-                + "AND fk_reviewerId = "+user.getUserId()+";";
-        PreparedStatement pstmt = null;
+        Statement stmt = null;
+        String query = "SELECT reviewText "
+                     + "FROM "+db+".GameReview  "
+                     + "WHERE fk_reviewerId = " + user.getUserId() + " "
+                     + "AND fk_gameId = "+game.getGameId()+";";
+        String review = "";
         try {
-            pstmt = conn.prepareStatement(sql);
-            pstmt.executeUpdate();
+            stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query);
+            rs.next();
+            review = rs.getString("reviewText");
+            if (stmt != null) {
+                stmt.close();
+            }
         } catch (SQLException e) {
-            System.out.println(e);
             e.printStackTrace();
         }
-        return pstmt.toString();
+        return review;
     }
     
     /**
